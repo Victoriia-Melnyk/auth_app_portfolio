@@ -28,7 +28,7 @@ A full-stack authentication application built with React (frontend) and Node.js/
 
 ## **Preview** 🎉
 
-- **[Live Demo]()**
+- **[Live Demo](https://auth-app-portfolio.onrender.com)**
 
 ---
 
