@@ -23,22 +23,20 @@ app.use(
 		credentials: true,
 	})
 );
-app.use(authRouter);
 
+app.use(authRouter);
 app.use(userRouter);
 
-// Serve React static files
+// ==== Serve React static files ====
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.static(path.join(__dirname, '../../client/build')));
-app.get('*', (req, res) => {
+
+// ✅ Для Express 5: RegExp або app.use
+app.get(/.*/, (req, res) => {
 	res.sendFile(path.join(__dirname, '../../client/build', 'index.html'));
 });
 
-// 404 handler (will only trigger for API routes if above did not match)
-app.use((req, res, next) => {
-	res.status(404).json({ message: 'Route not found' });
-});
-
+// ==== Error handler ====
 app.use((err, req, res, next) => {
 	res.status(err.status || 500).json({
 		message: err.message || 'Internal Server Error',
