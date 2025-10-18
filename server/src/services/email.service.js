@@ -1,56 +1,60 @@
 import 'dotenv/config';
-import nodemailer from 'nodemailer';
+import fetch from 'node-fetch';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
-});
+const RESEND_API = 'https://api.resend.com/emails';
 
-function send({ email, subject, html }) {
-  return transporter.sendMail({
-    to: email,
-    subject,
-    html,
-  });
+async function send({ to, subject, html }) {
+	const apiKey = process.env.RESEND_API_KEY;
+	const from = process.env.SENDER_EMAIL;
+
+	if (!apiKey || !from) {
+		throw new Error('Missing RESEND_API_KEY or SENDER_EMAIL');
+	}
+
+	const body = { from, to, subject, html };
+
+	const resp = await fetch(RESEND_API, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiKey}`,
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(body),
+	});
+
+	if (!resp.ok) {
+		const text = await resp.text();
+		throw new Error(`Resend error: ${resp.status} ${text}`);
+	}
+
+	const data = await resp.json();
+	console.log('✅ Email sent via Resend (test mode):', { to, subject });
+	return data;
 }
 
+// === Email templates ===
+
 function sendActivationEmail(email, token) {
-  const href = `${process.env.CLIENT_HOST}/activation/${token}`;
-  const html = `
-    <h1>Activate account</h1>
+	const href = `${process.env.CLIENT_HOST}/activation/${token}`;
+	const html = `
+    <h2>Activate your account</h2>
+    <p>Click the link below to activate your account:</p>
     <a href="${href}">${href}</a>
   `;
-
-  return send({ email, html, subject: 'Activate your account' });
+	return send({ to: email, subject: 'Activate your account', html });
 }
 
 function sendResetPasswordEmail(email, resetPasswordToken) {
-  const href = `${process.env.CLIENT_HOST}/reset-password/${resetPasswordToken}`;
-  const html = `
-  <h1>Confirm password change</h1>
-  <a href="${href}">${href}</a>
-  `;
-
-  return send({ email, html, subject: 'Reset your password' });
-}
-
-function sendChangeEmailLink(email, resetEmailToken) {
-  const href = `${process.env.CLIENT_HOST}/profile/change-email/${resetEmailToken}`;
-  const html = `
-    <h1>Confirm email change</h1>
+	const href = `${process.env.CLIENT_HOST}/reset-password/${resetPasswordToken}`;
+	const html = `
+    <h2>Reset your password</h2>
+    <p>Click the link below to reset it:</p>
     <a href="${href}">${href}</a>
   `;
-
-  return send({ email, html, subject: 'Confirm your new email' });
+	return send({ to: email, subject: 'Reset your password', html });
 }
 
 export const emailService = {
-  send,
-  sendActivationEmail,
-  sendResetPasswordEmail,
-  sendChangeEmailLink,
+	sendActivationEmail,
+	sendResetPasswordEmail,
 };
